@@ -1,154 +1,131 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import shutil
-import random
-from tqdm import tqdm
-from sklearn.metrics import classification_report
+import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.layers import Dense, Dropout, GlobalAveragePooling2D, Input
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+import seaborn as sns
 
-# ========== CONFIG ========== #
-base_path = r"C:\Users\dafne\OneDrive\Documentos\Escritorio\Alzheimer\Alzheimer_s Dataset"
-train_dir = os.path.join(base_path, "train")
-val_dir = os.path.join(base_path, "val")  # Se crea si no existe
-test_dir = os.path.join(base_path, "test")
-val_split = 0.2
-seed = 42
+# Rutas
+data_dir = 'Alzheimer_s Dataset'
+train_dir = os.path.join(data_dir, 'train')
+val_dir = os.path.join(data_dir, 'val')
+test_dir = os.path.join(data_dir, 'test')
 
-# ========== DIVIDE TRAIN EN VALIDACIÓN ========== #
-def create_validation_split(train_dir, val_dir, val_split=0.2):
-    if os.path.exists(val_dir) and len(os.listdir(val_dir)) > 0:
-        print("✔️ La carpeta de validación ya existe, no se moverán imágenes.")
-        return
-
-    print("📁 Creando conjunto de validación...")
-    os.makedirs(val_dir, exist_ok=True)
-
-    for class_name in os.listdir(train_dir):
-        class_train_path = os.path.join(train_dir, class_name)
-        if not os.path.isdir(class_train_path):
-            continue
-
-        images = os.listdir(class_train_path)
-        val_size = int(len(images) * val_split)
-        val_images = random.sample(images, val_size)
-
-        class_val_path = os.path.join(val_dir, class_name)
-        os.makedirs(class_val_path, exist_ok=True)
-
-        for img in val_images:
-            shutil.move(os.path.join(class_train_path, img),
-                        os.path.join(class_val_path, img))
-
-    print("✅ División completada.")
-
-create_validation_split(train_dir, val_dir, val_split)
-
-# ========== GENERADORES ========== #
+# Aumento de datos
 train_datagen = ImageDataGenerator(
     rescale=1./255,
-    rotation_range=15,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.1,
-    zoom_range=0.1,
-    horizontal_flip=True,
-    fill_mode='nearest'
+    rotation_range=20,
+    zoom_range=0.2,
+    horizontal_flip=True
 )
+val_test_datagen = ImageDataGenerator(rescale=1./255)
 
-test_val_datagen = ImageDataGenerator(rescale=1./255)
+# Generadores
+img_size = (180, 180)
+batch_size = 32
 
 train_generator = train_datagen.flow_from_directory(
-    train_dir,
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical',
-    shuffle=True,
-    seed=seed
-)
+    train_dir, target_size=img_size, batch_size=batch_size, class_mode='categorical')
+val_generator = val_test_datagen.flow_from_directory(
+    val_dir, target_size=img_size, batch_size=batch_size, class_mode='categorical')
+test_generator = val_test_datagen.flow_from_directory(
+    test_dir, target_size=img_size, batch_size=1, class_mode='categorical', shuffle=False)
 
-val_generator = test_val_datagen.flow_from_directory(
-    val_dir,
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical',
-    shuffle=False
-)
+class_names = list(train_generator.class_indices.keys())
+print("Clases detectadas:", class_names)
 
-test_generator = test_val_datagen.flow_from_directory(
-    test_dir,
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical',
-    shuffle=False
-)
+# Modelo base con Fine-tuning
+base_model = MobileNetV2(weights='imagenet', include_top=False, input_tensor=Input(shape=(180, 180, 3)))
 
-# ========== MODELO ========== #
-base_model = EfficientNetB0(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-base_model.trainable = False
+# 🔓 Desbloqueamos las últimas 30 capas para Fine-tuning
+for layer in base_model.layers[:-30]:
+    layer.trainable = False
+for layer in base_model.layers[-30:]:
+    layer.trainable = True
 
+# Modelo completo
 x = base_model.output
 x = GlobalAveragePooling2D()(x)
-x = Dropout(0.5)(x)
-x = Dense(256, activation='relu')(x)
 x = Dropout(0.3)(x)
-predictions = Dense(4, activation='softmax')(x)
+x = Dense(512, activation='relu')(x)
+x = Dropout(0.3)(x)
+output = Dense(len(class_names), activation='softmax')(x)
 
-model = Model(inputs=base_model.input, outputs=predictions)
+model = Model(inputs=base_model.input, outputs=output)
 
-model.compile(optimizer=Adam(learning_rate=0.0001),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
+# Compilación con learning rate bajo
+model.compile(optimizer=Adam(learning_rate=1e-5), loss='categorical_crossentropy', metrics=['accuracy'])
 
-# ========== ENTRENAMIENTO ========== #
-early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+# Callbacks
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+checkpoint = ModelCheckpoint("mejor_modelo.keras", save_best_only=True, verbose=1)
 
+# Entrenamiento
 history = model.fit(
     train_generator,
-    epochs=15,
     validation_data=val_generator,
-    callbacks=[early_stop]
+    epochs=20,
+    callbacks=[early_stop, checkpoint]
 )
 
-# ========== EVALUACIÓN ========== #
-test_loss, test_accuracy = model.evaluate(test_generator)
-print(f"\n🎯 Accuracy en test: {test_accuracy:.4f}")
+# Evaluación en test
+loss, acc = model.evaluate(test_generator, verbose=0)
+print(f"\n🔍 Precisión en el set de prueba: {acc * 100:.2f}%")
 
-Y_pred = model.predict(test_generator)
-y_pred = np.argmax(Y_pred, axis=1)
+# Predicciones
+y_pred = model.predict(test_generator)
+y_pred_labels = np.argmax(y_pred, axis=1)
+y_true = test_generator.classes
 
-print("\n📊 Reporte de clasificación:\n")
-print(classification_report(test_generator.classes, y_pred, target_names=test_generator.class_indices.keys()))
+# Reporte de clasificación
+print("\n📋 Reporte de Clasificación:\n")
+print(classification_report(y_true, y_pred_labels, target_names=class_names, zero_division=0))
 
-# ========== VISUALIZACIÓN ========== #
-def plot_metrics(history):
-    # Accuracy
-    plt.figure()
-    plt.plot(history.history['accuracy'], label='Entrenamiento')
-    plt.plot(history.history['val_accuracy'], label='Validación')
-    plt.title('Precisión (accuracy)')
-    plt.xlabel('Épocas')
-    plt.ylabel('Precisión')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig('accuracy_plot.png')
-    plt.show()
+# Matriz de confusión
+conf_matrix = confusion_matrix(y_true, y_pred_labels)
+plt.figure(figsize=(9, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+plt.title('Matriz de Confusión')
+plt.xlabel('Predicción')
+plt.ylabel('Real')
+plt.show()
 
-    # Loss
-    plt.figure()
-    plt.plot(history.history['loss'], label='Entrenamiento')
-    plt.plot(history.history['val_loss'], label='Validación')
-    plt.title('Pérdida (loss)')
-    plt.xlabel('Épocas')
-    plt.ylabel('Loss')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig('loss_plot.png')
-    plt.show()
+# Métricas generales
+accuracy = accuracy_score(y_true, y_pred_labels)
+precision = precision_score(y_true, y_pred_labels, average='weighted', zero_division=0)
+recall = recall_score(y_true, y_pred_labels, average='weighted', zero_division=0)
+f1 = f1_score(y_true, y_pred_labels, average='weighted', zero_division=0)
 
-plot_metrics(history)
+print("\n📊 Métricas generales:")
+print(f" Accuracy: {accuracy:.2f}")
+print(f" Precision: {precision:.2f}")
+print(f" Recall: {recall:.2f}")
+print(f" F1-score: {f1:.2f}")
+
+# Gráficas de entrenamiento
+plt.figure(figsize=(14, 5))
+
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Entrenamiento')
+plt.plot(history.history['val_accuracy'], label='Validación')
+plt.title('Precisión durante el entrenamiento')
+plt.xlabel('Épocas')
+plt.ylabel('Precisión')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Entrenamiento')
+plt.plot(history.history['val_loss'], label='Validación')
+plt.title('Pérdida durante el entrenamiento')
+plt.xlabel('Épocas')
+plt.ylabel('Pérdida')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
