@@ -43,7 +43,6 @@ print("Clases detectadas:", class_names)
 # Modelo base con Fine-tuning
 base_model = MobileNetV2(weights='imagenet', include_top=False, input_tensor=Input(shape=(180, 180, 3)))
 
-# 🔓 Desbloqueamos las últimas 30 capas para Fine-tuning
 for layer in base_model.layers[:-30]:
     layer.trainable = False
 for layer in base_model.layers[-30:]:
@@ -76,7 +75,7 @@ history = model.fit(
 
 # Evaluación en test
 loss, acc = model.evaluate(test_generator, verbose=0)
-print(f"\n🔍 Precisión en el set de prueba: {acc * 100:.2f}%")
+print(f"\n Precisión en el set de prueba: {acc * 100:.2f}%")
 
 # Predicciones
 y_pred = model.predict(test_generator)
@@ -84,7 +83,7 @@ y_pred_labels = np.argmax(y_pred, axis=1)
 y_true = test_generator.classes
 
 # Reporte de clasificación
-print("\n📋 Reporte de Clasificación:\n")
+print("\n Reporte de Clasificación:\n")
 print(classification_report(y_true, y_pred_labels, target_names=class_names, zero_division=0))
 
 # Matriz de confusión
@@ -102,7 +101,7 @@ precision = precision_score(y_true, y_pred_labels, average='weighted', zero_divi
 recall = recall_score(y_true, y_pred_labels, average='weighted', zero_division=0)
 f1 = f1_score(y_true, y_pred_labels, average='weighted', zero_division=0)
 
-print("\n📊 Métricas generales:")
+print("\n Métricas generales:")
 print(f" Accuracy: {accuracy:.2f}")
 print(f" Precision: {precision:.2f}")
 print(f" Recall: {recall:.2f}")
