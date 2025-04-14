@@ -1,3 +1,4 @@
+
 # Clasificación de Alzheimer con MobileNetV2
 
 Este proyecto busca construir un modelo de deep learning capaz de clasificar imágenes de resonancias magnéticas cerebrales para detectar distintos estados del Alzheimer. Está orientado a apoyar el diagnóstico médico automatizado, facilitando una detección temprana y precisa de esta enfermedad neurodegenerativa.
@@ -29,12 +30,21 @@ MobileNetV2 ofrece un buen equilibrio entre precisión y eficiencia computaciona
 
 ---
 
-## Otros artículos relacionados
+## Artículos del Estado del Arte
 
-- **"Alzheimer Disease Detection Using Transfer Learning with Convolutional Neural Networks"**  
-  [DOI: 10.1109/ACCESS.2020.3012332](https://ieeexplore.ieee.org/document/9144412)
-- **"Deep Learning for Alzheimer’s Disease Classification: A Comparative Analysis"**  
-  [DOI: 10.1016/j.neunet.2019.12.001](https://www.sciencedirect.com/science/article/pii/S0893608019302506)
+A continuación, se presentan trabajos científicos recientes que respaldan o contrastan la implementación usada en este proyecto:
+
+1. **Deep Learning for Alzheimer's Disease Diagnosis: A Survey**  
+   Publicado en *Artificial Intelligence in Medicine* (2022).  
+   🔗 [https://www.sciencedirect.com/science/article/abs/pii/S0933365722000975](https://www.sciencedirect.com/science/article/abs/pii/S0933365722000975)
+
+2. **A Proficient Approach for the Classification of Alzheimer's Disease Using a Hybridization of Machine Learning and Deep Learning**  
+   Publicado en *Scientific Reports* (2024).  
+   🔗 [https://www.nature.com/articles/s41598-024-81563-z](https://www.nature.com/articles/s41598-024-81563-z)
+
+3. **A Comparative Study of Deep Learning Techniques for Alzheimer's Disease Detection in Medical Radiography**  
+   Publicado en *IJCSNS* (2024).  
+   🔗 [https://www.researchgate.net/publication/381002805](https://www.researchgate.net/publication/381002805)
 
 ---
 
@@ -79,13 +89,11 @@ La primera versión del modelo usó solo la base congelada de MobileNetV2 sin fi
 | Recall      | 0.58      |
 | F1-score    | 0.51      |
 
- Se observó un sesgo hacia la clase **NonDemented**, con bajo rendimiento en clases minoritarias.
+Se observó un sesgo hacia la clase **NonDemented**, con bajo rendimiento en clases minoritarias.
 
 ---
 
 ## Resultados de la Iteración Mejorada (Fine-tuning y más capas)
-
-Se aplicó fine-tuning (desbloqueo de últimas 30 capas), más complejidad en las capas densas, y mayor número de épocas.
 
 ### Reporte de Clasificación
 
@@ -103,19 +111,19 @@ Se aplicó fine-tuning (desbloqueo de últimas 30 capas), más complejidad en la
 
 **Precisión en el set de prueba: 57.94%**
 
- Mejora notable en las métricas globales, aunque aún se identifican desafíos en las clases menos representadas.
+Mejora notable en las métricas globales, aunque aún se identifican desafíos en las clases menos representadas.
 
 ---
 
 ## Visualizaciones
 
-### 🔷 Matriz de Confusión
+### Matriz de Confusión
 
-![Matriz de Confusión](ruta/a/tu/imagen_confusion.png)
+![Matriz de Confusión](images/confusion_matrix.jpg)
 
 ### Curvas de Precisión y Pérdida
 
-![Gráficas de Entrenamiento](ruta/a/tu/imagen_curvas.png)
+![Gráficas de Entrenamiento](images/training_curves.jpg)
 
 ---
 
@@ -130,12 +138,19 @@ Se aplicó fine-tuning (desbloqueo de últimas 30 capas), más complejidad en la
 ## Referencias
 
 1. Sandler, M., et al. *"MobileNetV2: Inverted Residuals and Linear Bottlenecks"*. arXiv, 2018.  
-2. Jain, R., et al. *"Alzheimer Disease Detection Using Transfer Learning"*. IEEE Access, 2020.  
-3. Basaia, S., et al. *"Automated Classification of Alzheimer’s Disease and Mild Cognitive Impairment Using Deep Learning"*. Neurolmage: Clinical, 2019.
+   🔗 https://arxiv.org/abs/1801.04381  
+2. Gupta, R., et al. *"Deep Learning for Alzheimer's Disease Diagnosis: A Survey"*. Artificial Intelligence in Medicine, 2022.  
+   🔗 https://www.sciencedirect.com/science/article/abs/pii/S0933365722000975  
+3. Kalra, A., et al. *"A Proficient Approach for the Classification of Alzheimer's Disease..."*. Scientific Reports, 2024.  
+   🔗 https://www.nature.com/articles/s41598-024-81563-z  
+4. Ilyas, S., et al. *"A Comparative Study of Deep Learning Techniques for Alzheimer's Disease Detection..."*. IJCSNS, 2024.  
+   🔗 https://www.researchgate.net/publication/381002805  
 
 ---
 
-## 🚀 Cómo ejecutar
+## Cómo ejecutar
 
 ```bash
 python Modelo_Alzheimer.py
+```
+
